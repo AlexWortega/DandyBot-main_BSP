@@ -1,9 +1,13 @@
 from math import sqrt
 from random import random
+from random import randint
 from random import randrange
 from random import choice
 
-#обьект лабаринта
+
+
+
+# обьект лабаринта
 class DungeonSqr:
     def __init__(self, sqr):
         self.sqr = sqr
@@ -11,13 +15,92 @@ class DungeonSqr:
     def get_ch(self):
         return self.sqr
 
-#комната
+
+# комната
 class Room:
     def __init__(self, r, c, h, w):
         self.row = r
         self.col = c
         self.height = h
         self.width = w
+        self.map = []
+        print(self.height, self.width)
+
+        for h in range(self.height):
+            row = []
+            for w in range(self.width):
+                row.append(DungeonSqr('#'))
+            row[0] = DungeonSqr(' ')
+            row[-1] = DungeonSqr(' ')
+            self.map.append(row)
+
+        self.map[0] = [DungeonSqr(' ') for x in range(self.width)]
+        self.map[-1] = [DungeonSqr(' ') for x in range(self.width)]
+        self.generate()
+
+    # кастомный random walk для случайной генерации внутри каждой комнаты
+    def generate(self):
+        floor_x, floor_y = 1, 1  # randint(1, self.width - 1), randint(1, self.height - 1)
+        required_floor = (self.height * self.width) * random()  # - 2 * (self.height + self.width ) - 4) * 0.9
+        print(required_floor, self.height * self.width)
+        self.map[floor_y][floor_x] = DungeonSqr(' ')
+
+        for floor_count in range(round(required_floor - 0.5)):
+            counter = 0
+            while counter < 100:
+                direction = randint(1, 4)
+                if direction == 1:
+                    if floor_y + 1 < self.height - 1:
+                        floor_y += 1
+                        if (self.map[floor_y][floor_x].get_ch() == '#'):
+                            self.map[floor_y][floor_x] = DungeonSqr(' ')
+                            break
+                        else:
+                            counter += 1
+                    else:
+                        counter += 1
+                elif direction == 2:
+                    if floor_y - 1 > 1:
+                        floor_y -= 1
+                        if (self.map[floor_y][floor_x].get_ch() == '#'):
+                            self.map[floor_y][floor_x] = DungeonSqr(' ')
+                            break
+                        else:
+                            counter += 1
+                    else:
+                        counter += 1
+                elif direction == 3:
+                    if floor_x + 1 < self.width - 1:
+                        floor_x += 1
+                        if (self.map[floor_y][floor_x].get_ch() == '#'):
+                            self.map[floor_y][floor_x] = DungeonSqr(' ')
+                            break
+                        else:
+                            counter += 1
+                    else:
+                        counter += 1
+                else:
+                    if floor_x - 1 > 1:
+                        floor_x -= 1
+                        if (self.map[floor_y][floor_x].get_ch() == '#'):
+                            self.map[floor_y][floor_x] = DungeonSqr(' ')
+                            break
+                        else:
+                            counter += 1
+                    else:
+                        counter += 1
+
+"""
+This example procedurally develops a random cave based on
+Binary Space Partitioning (BSP)
+
+For more information, see:
+http://roguebasin.roguelikedevelopment.org/index.php?title=Basic_BSP_Dungeon_generation
+https://github.com/DanaL/RLDungeonGenerator
+
+If Python and Arcade are installed, this example can be run from the command line with:
+python -m arcade.examples.procedural_caves_bsp
+"""
 
 
 class RLDungeonGenerator:
@@ -35,7 +118,8 @@ class RLDungeonGenerator:
                 row.append(DungeonSqr('#'))
 
             self.dungeon.append(row)
-    #кастомный сплит чтобы работал до границ
+
+    # кастомный сплит чтобы работал до границ
     def random_split(self, min_row, min_col, max_row, max_col):
 
         seg_height = max_row - min_row
@@ -52,7 +136,8 @@ class RLDungeonGenerator:
                 self.split_on_horizontal(min_row, min_col, max_row, max_col)
             else:
                 self.split_on_vertical(min_row, min_col, max_row, max_col)
-    #распределение комнат по горизонтали
+
+    # распределение комнат по горизонтали
     def split_on_horizontal(self, min_row, min_col, max_row, max_col):
         split = (min_row + max_row) // 2 + choice((-2, -1, 0, 1, 2))
         self.random_split(min_row, min_col, split, max_col)
@@ -64,6 +149,11 @@ class RLDungeonGenerator:
         self.random_split(min_row, min_col, max_row, split)
         self.random_split(min_row, split + 1, max_row, max_col)
 
+    def permit_room(self, room):
+        for r, row in enumerate(room.map):
+            for c, tile in enumerate(row):
+                self.dungeon[room.row + r][room.col + c] = tile
+
     def carve_rooms(self):
         for leaf in self.leaves:
             # наполняем листья комнатми
@@ -72,10 +162,10 @@ class RLDungeonGenerator:
             section_height = leaf[2] - leaf[0]
 
             # чтобы команты не стыковались совсем в плотную
-            room_width = round(randrange(60, 100) / 100 * section_width)
-            room_height = round(randrange(60, 100) / 100 * section_height)
+            room_width = round(randrange(80, 100) / 100 * section_width)
+            room_height = round(randrange(80, 100) / 100 * section_height)
 
-            #проверка что комнаты не слишком далеко
+            # проверка что комнаты не слишком далеко
             if section_height > room_height:
                 room_start_row = leaf[0] + randrange(section_height - room_height)
             else:
@@ -87,9 +177,10 @@ class RLDungeonGenerator:
                 room_start_col = leaf[1]
 
             self.rooms.append(Room(room_start_row, room_start_col, room_height, room_width))
-            for r in range(room_start_row, room_start_row + room_height):
-                for c in range(room_start_col, room_start_col + room_width):
-                    self.dungeon[r][c] = DungeonSqr(' ')
+            self.permit_room(self.rooms[-1])
+            # for r in range(room_start_row, room_start_row + room_height):
+            #    for c in range(room_start_col, room_start_col + room_width):
+            #        self.dungeon[r][c] = DungeonSqr(' ')
 
     def are_rooms_adjacent(self, room1, room2):
         adj_rows = []
@@ -107,9 +198,10 @@ class RLDungeonGenerator:
     def distance_between_rooms(self, room1, room2):
         centre1 = (room1.row + room1.height // 2, room1.col + room1.width // 2)
         centre2 = (room2.row + room2.height // 2, room2.col + room2.width // 2)
-        #тупо манхэтэнское расстояние
-        return sqrt((centre1[0] - centre2[0]) ** 2 + (centre1[1] - centre2[1]) ** 2)
-    #коррдиор между двумя комантами
+        # тупо манхэтэнское расстояние
+        return sqrt((centre1[0] - centre2[0]) ** 2 + (centre1[1] - centre2[1]) ** 2) + 1
+        # коррдиор между двумя комантами
+
     def carve_corridor_between_rooms(self, room1, room2):
         if room2[2] == 'rows':
             row = choice(room2[1])
@@ -147,7 +239,7 @@ class RLDungeonGenerator:
             elif start_row == end_row - 1:
                 self.dungeon[start_row][col] = DungeonSqr('1')
 
-    #ищем две группы комнат и соеденяем их
+    # ищем две группы комнат и соеденяем их
     def find_closest_unconnect_groups(self, groups, room_dict):
         shortest_distance = 99999
         start = None
@@ -177,11 +269,9 @@ class RLDungeonGenerator:
         groups.remove(other_group)
 
     def connect_rooms(self):
-        # Build a dictionary containing an entry for each room. Each bucket will
-        # hold a list of the adjacent rooms, weather they are adjacent along rows or
-        # columns and the distance between them.
-        #
-        # Also build the initial groups (which start of as a list of individual rooms)
+        """
+        собирает входы в комнаты в словарь
+        """
         groups = []
         room_dict = {}
         for room in self.rooms:
@@ -202,6 +292,7 @@ class RLDungeonGenerator:
             self.find_closest_unconnect_groups(groups, room_dict)
 
     def generate_map(self):
+        pass
         self.random_split(1, 1, self.height - 1, self.width - 1)
         self.carve_rooms()
         self.connect_rooms()
@@ -212,37 +303,39 @@ class RLDungeonGenerator:
             for c in range(self.width):
                 row += self.dungeon[r][c].get_ch()
             print(row)
+
     def getmap(self):
-        map =[]
+        map = []
         for r in range(self.height):
-            st=''
+            st = ''
             for c in range(self.width):
-                st+=(self.dungeon[r][c].get_ch())
-            map+=[st]
+                st += (self.dungeon[r][c].get_ch())
+            map += [st]
 
         return map
+
     def create_spawn(self):
-        x,y = 0,0
+        x, y = 0, 0
         for row in range(self.height):
             for col in range(self.width):
-                if self.dungeon[row][col].get_ch()==' ':
-
-                    self.dungeon[row][col]=DungeonSqr('*')
-                    y,x=(row,col)
+                if self.dungeon[row][col].get_ch() == ' ':
+                    self.dungeon[row][col] = DungeonSqr('*')
+                    y, x = (row, col)
                     break
-        return x,y
+        return x, y
+
     def getgold(self):
-        gld=0
+        gld = 0
         for row in range(self.height):
             for col in range(self.width):
                 if self.dungeon[row][col].get_ch() == '1':
-                    gld+=1
+                    gld += 1
         return gld
+
+
 dg = RLDungeonGenerator(30, 20)
 dg.generate_map()
 
-print(dg.getgold())
-dg.print_map()
-#(dg.create_spawn())
-#print(dg.getmap())
+#print(dg.getgold())
+#dg.print_map()
 
